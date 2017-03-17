@@ -46,4 +46,7 @@ fn main() {
 
 # TODO
 
- - Preserve dependency order
+ 1. Preserve dependency order
+ 2. Automated tests
+ 3. More generics (not sure if this would add anything)
+ 3. Optimizations (again not sure this would add anything)

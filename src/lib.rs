@@ -1,3 +1,48 @@
+//! A library to help build dependencies externally from rust. Uses petgraph under the hood for
+//! managing the graph structure.
+//!
+//! # Example
+//! *An example is worth a thousand words* - made up quote.
+//!
+//! ## Example build script
+//!
+//! ```rust
+//! extern crate depgraph;
+//!
+//! use depgraph;
+//!
+//! fn build_assembly(out: &str, deps: &[&str]) -> Result<(), String> {
+//!     // Make sure the folder we're going to output to exists.
+//!     let out_dir = Path::new(out).parent().unwrap();
+//!     fs::create_dir_all(out_dir).unwrap();
+//!
+//!     // Run the command with correct argument order
+//!     Command.new("yasm").args(&["-f", "elf64", "-o"]).arg(out).args(deps)
+//!         .status().unwrap();
+//!     // Everything went ok so we return Ok(()). Instead of panicking, we could
+//!     // have returned an error message and handled it in main.
+//!     Ok(())
+//! }
+//!
+//! fn main() {
+//!     // Get the directory we should put files in.
+//!     let out_dir = Path::new(env::var("OUT_DIR").unwrap());
+//!     // Create the graph builder
+//!     let mut graph = depgraph::DepGraphBuilder::new();
+//!     // Add a rule to build an object file from an asm file using the build
+//!     // script in `build_assembly`.
+//!     graph.add_rule(out_dir.join("out/path/file.o").to_str().unwrap(),
+//!         &["src/input_file.asm"],
+//!         build_assembly);
+//!     // Build the graph, internally this checks for cyclic dependencies.
+//!     let graph = graph.build().unwrap();
+//!     // Run the necessary build scripts in the correct order.
+//!     graph.make(false).unwrap();
+//! }
+//! ```
+//!
+
+
 extern crate petgraph;
 
 mod error;
@@ -15,6 +60,10 @@ pub use petgraph;
 
 pub use error::{Error, DepResult};
 
+/// (Internal) Information on a dependency (how to build it and what it's called)
+///
+/// TODO keep copy of dependencies in order, so we don't have to look them up on the graph, and
+/// they stay in order
 struct DependencyNode {
     filename: String,
     build_fn: Option<Box<Fn(&str, &[&str]) -> Result<(), String>>>,
@@ -27,20 +76,22 @@ impl fmt::Debug for DependencyNode {
 }
 
 /// Used to construct a DepGraph
+///
+/// See the module level documentation for an example of how to use this
 pub struct DepGraphBuilder {
     /// List of edges, .0 is dependent, .1 is dependencies, .2 is build fn
     edges: Vec<(String, Vec<String>, Box<Fn(&str, &[&str]) -> Result<(), String>>)>
 }
 
 impl DepGraphBuilder {
-    /// Create a `DepGraphBuilder`
+    /// Create a `DepGraphBuilder` with no rules.
     pub fn new() -> DepGraphBuilder {
         DepGraphBuilder { edges: Vec::new() }
     }
 
-    /// Add a new rule (a file with it's dependent files and build instructions).
+    /// Add a new rule (a file with its dependent files and build instructions).
     ///
-    /// These can be added in any order.
+    /// These can be added in any order, and can be chained.
     pub fn add_rule<F>(&mut self, filename: &str, dependencies: &[&str], build_fn: F)
         -> &DepGraphBuilder
         where F: Fn(&str, &[&str]) -> Result<(), String> + 'static
@@ -53,7 +104,7 @@ impl DepGraphBuilder {
         self
     }
 
-    /// Build the make graph
+    /// Build the make graph and check for errors like cyclic dependencies and duplicate files.
     pub fn build(self) -> DepResult<DepGraph> {
         // used to check a file isn't added more than once. (filename -> NodeId)
         let mut files = HashMap::new();
@@ -113,10 +164,7 @@ impl DepGraphBuilder {
 
 }
 
-/// A make graph
-///
-/// A make graph is a digraph of files that depend on each other, with instructions on how to
-/// build the files from their dependencies.
+/// Contains the checked and parsed dependency graph, ready for execution (`fn make`)
 pub struct DepGraph {
     /// Node is file (weight is filename, build function), edge is dependency
     graph: Graph<DependencyNode, ()>,
@@ -126,7 +174,10 @@ pub struct DepGraph {
 impl DepGraph {
     /// Run the build
     ///
-    /// If force is true, all build functions will be run, regardless of file times
+    /// If force is true, all build functions will be run, regardless of file times, otherwise
+    /// build will only be run if one of the dependency files is newer than the output file.
+    // There are possible optimizations here as there are redundent metadata checks, I don't think
+    // this is a big deal though.
     pub fn make(&self, force: bool) -> DepResult<()> {
         // Get files in dependency order
         // Needs to be reversed to build in right order
@@ -139,6 +190,7 @@ impl DepGraph {
         Ok(())
     }
 
+    /// Helper function to build a specific dependency
     fn build_dependency(&self, idx: NodeIndex<u32>, force: bool) -> DepResult<()> {
         let dep = self.graph.node_weight(idx).unwrap();
         // collect names of children (don't copy strings)

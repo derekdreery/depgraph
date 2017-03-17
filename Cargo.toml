@@ -2,6 +2,16 @@
 name = "depgraph"
 version = "0.1.0"
 authors = ["Richard Dodd <richard.o.dodd@gmail.com>"]
+include = ["README.md", "Cargo.toml", "src/**/*.rs"]
+description = """A library to manange files that depend on each other, and
+rebuild them as necessary, like a makefile"""
+documentation = "https://docs.rs/depgraph"
+homepage = "https://github.com/derekdreery/depgraph"
+repository = "https://github.com/derekdreery/depgraph"
+readme = "README.md"
+keywords = ["build", "make", "makefile", "dependency", "graph"]
+categories = ["filesystem", "development-tools"]
+license = "MIT/Apache-2.0"
 
 [dependencies]
 petgraph = "*"
