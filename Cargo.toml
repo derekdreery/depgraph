@@ -1,6 +1,6 @@
 [package]
 name = "depgraph"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Richard Dodd <richard.o.dodd@gmail.com>"]
 include = ["README.md", "Cargo.toml", "src/**/*.rs"]
 description = """A library to manange files that depend on each other, and
