@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 
 /// Any error that can occur during build
 ///
@@ -10,7 +11,7 @@ pub enum Error {
     /// Same file added more than once
     DuplicateFile,
     /// A file that should either be present or be crated during build is missing.
-    MissingFile(String),
+    MissingFile(PathBuf),
     /// The supplied build script returned an error
     BuildFailed(String),
 }
