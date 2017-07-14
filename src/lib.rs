@@ -6,7 +6,7 @@
 //!
 //! ## Example build script
 //!
-//! ```rust
+//! ```no_run
 //! extern crate depgraph;
 //! use std::path::Path;
 //! use std::{fs, env};
@@ -14,7 +14,7 @@
 //!
 //! fn build_assembly(out: &Path, deps: &[&Path]) -> Result<(), String> {
 //!     // Make sure the folder we're going to output to exists.
-//!     let out_dir = Path::new(out).parent().unwrap();
+//!     let out_dir = out.parent().unwrap();
 //!     fs::create_dir_all(out_dir).unwrap();
 //!
 //!     // Run the command with correct argument order

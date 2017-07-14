@@ -13,9 +13,6 @@ keywords = ["build", "make", "makefile", "dependency", "graph"]
 categories = ["filesystem", "development-tools"]
 license = "MIT/Apache-2.0"
 
-[lib]
-doctest = false
-
 [dependencies]
 petgraph = "0.4"
 
