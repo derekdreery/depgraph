@@ -4,7 +4,7 @@
 
 Initial version
 
-# Version 0.2
+## Version 0.2
 
  1. Change builder to be more like builder pattern.
  2. Enforce `AsRef<Path>` for filenames.
