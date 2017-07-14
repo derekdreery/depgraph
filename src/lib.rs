@@ -96,22 +96,25 @@ impl DepGraphBuilder {
     /// Add a new rule (a file with its dependent files and build instructions).
     ///
     /// These can be added in any order, and can be chained.
-    pub fn add_rule<F, P1, P2>(mut self,
-                               filename: P1,
-                               dependencies: &[P2],
-                               build_fn: F)
-                               -> DepGraphBuilder
-        where F: Fn(&Path, &[&Path]) -> Result<(), String> + 'static,
-              P1: AsRef<Path>,
-              P2: AsRef<Path>
+    pub fn add_rule<F, P1, P2>(
+        mut self,
+        filename: P1,
+        dependencies: &[P2],
+        build_fn: F,
+    ) -> DepGraphBuilder
+    where
+        F: Fn(&Path, &[&Path]) -> Result<(), String> + 'static,
+        P1: AsRef<Path>,
+        P2: AsRef<Path>,
     {
-        self.edges
-            .push((filename.as_ref().to_path_buf(),
-                   dependencies
-                       .iter()
-                       .map(|s| s.as_ref().to_path_buf())
-                       .collect(),
-                   Box::new(build_fn)));
+        self.edges.push((
+            filename.as_ref().to_path_buf(),
+            dependencies
+                .iter()
+                .map(|s| s.as_ref().to_path_buf())
+                .collect(),
+            Box::new(build_fn),
+        ));
         self
     }
 
@@ -133,9 +136,9 @@ impl DepGraphBuilder {
             }
             // add node to graph and get index
             let idx = graph.add_node(DependencyNode {
-                                         filename: filename.clone(),
-                                         build_fn: Some(build_fn),
-                                     });
+                filename: filename.clone(),
+                build_fn: Some(build_fn),
+            });
             // add file to list
             files.insert(filename, idx);
             edges_after_node.push((idx, dependencies));
@@ -154,9 +157,9 @@ impl DepGraphBuilder {
                 } else {
                     // file not yet a dependency - add it
                     let idx2 = graph.add_node(DependencyNode {
-                                                  filename: dep.clone(),
-                                                  build_fn: None,
-                                              });
+                        filename: dep.clone(),
+                        build_fn: None,
+                    });
                     files.insert(dep, idx2);
                     graph.add_edge(idx, idx2, ());
                 }
@@ -168,9 +171,9 @@ impl DepGraphBuilder {
         }
 
         Ok(DepGraph {
-               graph: graph,
+            graph: graph,
             //file_hash: files,
-           })
+        })
     }
 }
 
@@ -197,8 +200,9 @@ impl DepGraph {
     pub fn make(&self, make_params: MakeParams) -> DepResult<()> {
         // Get files in dependency order
         // Needs to be reversed to build in right order
-        let ordered_deps_rev = petgraph::algo::toposort(&self.graph, None)
-            .map_err(|_| Error::Cycle)?;
+        let ordered_deps_rev = petgraph::algo::toposort(&self.graph, None).map_err(
+            |_| Error::Cycle,
+        )?;
         let force: bool = match make_params {
             MakeParams::None => false,
             MakeParams::ForceBuild => true,
@@ -215,7 +219,9 @@ impl DepGraph {
         // collect names of children (don't copy strings)
         let children: Vec<&Path> = self.graph
             .neighbors_directed(idx, petgraph::Outgoing)
-            .map(|idx| self.graph.node_weight(idx).unwrap().filename.as_path())
+            .map(|idx| {
+                self.graph.node_weight(idx).unwrap().filename.as_path()
+            })
             .collect();
         for child in children.iter() {
             if !Path::new(child).exists() {
@@ -225,8 +231,9 @@ impl DepGraph {
         // if there is a build script, and dependency timestamps are newer, run it
         if let Some(ref f) = dep.build_fn {
             if force || dependencies_newer(&dep.filename, &children) {
-                f(&dep.filename, &children)
-                    .map_err(|s| Error::BuildFailed(s))?;
+                f(&dep.filename, &children).map_err(
+                    |s| Error::BuildFailed(s),
+                )?;
             }
         }
         // check that file has been created
@@ -288,9 +295,11 @@ mod tests {
         let tmp = tmp_dir.path();
         println!("tmp dir {:?}", tmp);
         let makegraph = DepGraphBuilder::new()
-            .add_rule(tmp.join("File1"),
-                      &[tmp.join("file2"), tmp.join("file3")],
-                      copy_build)
+            .add_rule(
+                tmp.join("File1"),
+                &[tmp.join("file2"), tmp.join("file3")],
+                copy_build,
+            )
             .add_rule(tmp.join("file2"), &[tmp.join("file3")], copy_build)
             .add_rule(tmp.join("file4"), &[tmp.join("file5")], copy_build)
             .build()
