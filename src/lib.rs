@@ -184,9 +184,14 @@ pub struct DepGraph {
     //file_hash: HashMap<String, NodeIndex<u32>>,
 }
 
+/// When running the build scripts, we can either only build when output files are newer than their
+/// dependencies, or we can force the build script to run regardless. This enum allows for those
+/// two choices.
 #[derive(Debug, Clone, Copy)]
 pub enum MakeParams {
+    /// Just build normally, where we only rebuild if the source was updated
     None,
+    /// Always build, regardless of status of source
     ForceBuild,
 }
 
