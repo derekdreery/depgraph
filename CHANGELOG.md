@@ -17,3 +17,7 @@ Add to build scripts subcategory
 ## Version 0.2.2
 
 Add docs to `MakeParams`
+
+## Version 0.3
+
+Add utility method to add dependency to all files.

@@ -118,6 +118,19 @@ impl DepGraphBuilder {
         self
     }
 
+    /// Add a dependency to all previously added files. Will only affect previously added files,
+    /// not those added in the future.
+    ///
+    /// This can be used to make all rules depend on `build.rs`, for example.
+    pub fn add_dep_to_all<P>(mut self, dep: P) -> DepGraphBuilder
+        where P: AsRef<Path>
+    {
+        for mut edge in self.edges.iter_mut() {
+            edge.1.push(dep.as_ref().to_owned());
+        }
+        self
+    }
+
     /// Build the make graph and check for errors like cyclic dependencies and duplicate files.
     pub fn build(self) -> DepResult<DepGraph> {
         // used to check a file isn't added more than once. (filename -> NodeId)
@@ -307,6 +320,7 @@ mod tests {
             )
             .add_rule(tmp.join("file2"), &[tmp.join("file3")], copy_build)
             .add_rule(tmp.join("file4"), &[tmp.join("file5")], copy_build)
+            .add_dep_to_all(tmp.join("file6"))
             .build()
             .unwrap();
         {
@@ -315,6 +329,8 @@ mod tests {
 
             let mut file5 = File::create(tmp.join("file5")).unwrap();
             write!(&mut file5, "file5\n").unwrap();
+            let mut file6 = File::create(tmp.join("file6")).unwrap();
+            write!(&mut file6, "file6\n").unwrap();
         }
         makegraph.make(MakeParams::None).unwrap();
     }
