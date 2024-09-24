@@ -12,6 +12,7 @@ readme = "README.md"
 keywords = ["build", "make", "makefile", "dependency", "graph"]
 categories = ["filesystem", "development-tools::build-utils"]
 license = "MIT/Apache-2.0"
+edition = "2018"
 
 [dependencies]
 petgraph = "0.4"

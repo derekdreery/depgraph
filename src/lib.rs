@@ -7,7 +7,6 @@
 //! ## Example build script
 //!
 //! ```no_run
-//! extern crate depgraph;
 //! use std::path::Path;
 //! use std::{fs, env};
 //! use std::process::Command;
@@ -45,10 +44,6 @@
 //!
 
 
-extern crate petgraph;
-#[cfg(test)]
-extern crate tempdir;
-
 mod error;
 
 use std::fs;
@@ -62,7 +57,7 @@ use petgraph::graph::NodeIndex;
 #[cfg(feature = "petgraph_visible")]
 pub use petgraph;
 
-pub use error::{Error, DepResult};
+pub use crate::error::{Error, DepResult};
 
 /// (Internal) Information on a dependency (how to build it and what it's called)
 ///
@@ -70,7 +65,7 @@ pub use error::{Error, DepResult};
 /// they stay in order
 struct DependencyNode {
     filename: PathBuf,
-    build_fn: Option<Box<Fn(&Path, &[&Path]) -> Result<(), String>>>,
+    build_fn: Option<Box<dyn Fn(&Path, &[&Path]) -> Result<(), String>>>,
 }
 
 impl fmt::Debug for DependencyNode {
@@ -84,7 +79,7 @@ impl fmt::Debug for DependencyNode {
 /// See the module level documentation for an example of how to use this
 pub struct DepGraphBuilder {
     /// List of edges, .0 is dependent, .1 is dependencies, .2 is build fn
-    edges: Vec<(PathBuf, Vec<PathBuf>, Box<Fn(&Path, &[&Path]) -> Result<(), String>>)>,
+    edges: Vec<(PathBuf, Vec<PathBuf>, Box<dyn Fn(&Path, &[&Path]) -> Result<(), String>>)>,
 }
 
 impl DepGraphBuilder {
@@ -125,7 +120,7 @@ impl DepGraphBuilder {
     pub fn add_dep_to_all<P>(mut self, dep: P) -> DepGraphBuilder
         where P: AsRef<Path>
     {
-        for mut edge in self.edges.iter_mut() {
+        for edge in self.edges.iter_mut() {
             edge.1.push(dep.as_ref().to_owned());
         }
         self
