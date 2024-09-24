@@ -43,21 +43,20 @@
 //! ```
 //!
 
-
 mod error;
 
-use std::fs;
-use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use std::fmt;
+use std::fs;
+use std::path::{Path, PathBuf};
 
-use petgraph::Graph;
 use petgraph::graph::NodeIndex;
+use petgraph::Graph;
 
 #[cfg(feature = "petgraph_visible")]
 pub use petgraph;
 
-pub use crate::error::{Error, DepResult};
+pub use crate::error::{DepResult, Error};
 
 /// (Internal) Information on a dependency (how to build it and what it's called)
 ///
@@ -79,7 +78,11 @@ impl fmt::Debug for DependencyNode {
 /// See the module level documentation for an example of how to use this
 pub struct DepGraphBuilder {
     /// List of edges, .0 is dependent, .1 is dependencies, .2 is build fn
-    edges: Vec<(PathBuf, Vec<PathBuf>, Box<dyn Fn(&Path, &[&Path]) -> Result<(), String>>)>,
+    edges: Vec<(
+        PathBuf,
+        Vec<PathBuf>,
+        Box<dyn Fn(&Path, &[&Path]) -> Result<(), String>>,
+    )>,
 }
 
 impl DepGraphBuilder {
@@ -118,7 +121,8 @@ impl DepGraphBuilder {
     ///
     /// This can be used to make all rules depend on `build.rs`, for example.
     pub fn add_dep_to_all<P>(mut self, dep: P) -> DepGraphBuilder
-        where P: AsRef<Path>
+    where
+        P: AsRef<Path>,
     {
         for edge in self.edges.iter_mut() {
             edge.1.push(dep.as_ref().to_owned());
@@ -213,9 +217,8 @@ impl DepGraph {
     pub fn make(&self, make_params: MakeParams) -> DepResult<()> {
         // Get files in dependency order
         // Needs to be reversed to build in right order
-        let ordered_deps_rev = petgraph::algo::toposort(&self.graph, None).map_err(
-            |_| Error::Cycle,
-        )?;
+        let ordered_deps_rev =
+            petgraph::algo::toposort(&self.graph, None).map_err(|_| Error::Cycle)?;
         let force: bool = match make_params {
             MakeParams::None => false,
             MakeParams::ForceBuild => true,
@@ -230,11 +233,10 @@ impl DepGraph {
     fn build_dependency(&self, idx: NodeIndex<u32>, force: bool) -> DepResult<()> {
         let dep = self.graph.node_weight(idx).unwrap();
         // collect names of children (don't copy strings)
-        let children: Vec<&Path> = self.graph
+        let children: Vec<&Path> = self
+            .graph
             .neighbors_directed(idx, petgraph::Outgoing)
-            .map(|idx| {
-                self.graph.node_weight(idx).unwrap().filename.as_path()
-            })
+            .map(|idx| self.graph.node_weight(idx).unwrap().filename.as_path())
             .collect();
         for child in children.iter() {
             if !Path::new(child).exists() {
@@ -244,9 +246,7 @@ impl DepGraph {
         // if there is a build script, and dependency timestamps are newer, run it
         if let Some(ref f) = dep.build_fn {
             if force || dependencies_newer(&dep.filename, &children) {
-                f(&dep.filename, &children).map_err(
-                    |s| Error::BuildFailed(s),
-                )?;
+                f(&dep.filename, &children).map_err(|s| Error::BuildFailed(s))?;
             }
         }
         // check that file has been created
@@ -255,7 +255,6 @@ impl DepGraph {
         } else {
             Err(Error::MissingFile(dep.filename.clone()))
         }
-        //println!("{:?}", children);
     }
 
     /// Get the underlying graph
@@ -282,10 +281,10 @@ fn dependencies_newer(filename: &Path, deps: &[&Path]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use std::io::{Write, Read};
+    use super::*;
     use std::fs::File;
     use std::io;
-    use super::*;
+    use std::io::{Read, Write};
     use tempdir::TempDir;
 
     fn copy_build(fname: &Path, deps: &[&Path]) -> Result<(), String> {
